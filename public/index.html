@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JM · API Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --green:     #3fb950;
+      --blue:      #58a6ff;
+      --orange:    #d29922;
+      --red:       #f85149;
+      --purple:    #bc8cff;
+      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      max-width: 780px;
+      margin: 0 auto 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+    .header__title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .header__title span { color: var(--blue); }
+    .header__sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 6px;
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    /* ── Cards ── */
+    .cards {
+      max-width: 780px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .card__header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .card__header:hover { background: rgba(255,255,255,0.03); }
+
+    .method {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+    }
+    .method--get    { background: rgba(63,185,80,0.15);  color: var(--green); }
+    .method--post   { background: rgba(88,166,255,0.15); color: var(--blue);  }
+
+    .card__path { color: var(--text); font-size: 13px; }
+    .card__desc { color: var(--muted); font-size: 12px; margin-left: auto; }
+    .card__chevron { color: var(--muted); font-size: 10px; transition: transform 0.2s; margin-left: 8px; }
+    .card.is-open .card__chevron { transform: rotate(90deg); }
+
+    .card__body {
+      display: none;
+      padding: 16px;
+      gap: 12px;
+      flex-direction: column;
+    }
+    .card.is-open .card__body { display: flex; }
+
+    /* ── Request editor ── */
+    .label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 10px 12px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--blue); }
+
+    /* ── Run button ── */
+    .btn-run {
+      align-self: flex-start;
+      background: var(--blue);
+      color: #0d1117;
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 18px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+    }
+    .btn-run:hover { opacity: 0.85; }
+    .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Response pane ── */
+    .response { display: none; }
+    .response.is-visible { display: block; }
+
+    .response__meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .status-badge--ok  { background: rgba(63,185,80,0.15); color: var(--green); }
+    .status-badge--err { background: rgba(248,81,73,0.15);  color: var(--red);   }
+    .response__time { color: var(--muted); }
+
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* JSON syntax highlighting */
+    .json-key    { color: var(--blue); }
+    .json-string { color: var(--green); }
+    .json-number { color: var(--orange); }
+    .json-bool   { color: var(--purple); }
+    .json-null   { color: var(--red); }
+
+    /* ── Footer ── */
+    .footer {
+      max-width: 780px;
+      margin: 32px auto 0;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .footer a { color: var(--blue); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <div class="header__title"><span class="status-dot"></span>JM · <span>API Demo</span></div>
+    <div class="header__sub">Live endpoints — click any card to try it</div>
+  </div>
+</header>
+
+<main class="cards" id="cards">
+
+  <!-- /health -->
+  <div class="card" id="card-health">
+    <div class="card__header" onclick="toggleCard('health')">
+      <span class="method method--get">GET</span>
+      <span class="card__path">/health</span>
+      <span class="card__desc">Service status &amp; uptime</span>
+      <span class="card__chevron">▶</span>
+    </div>
+    <div class="card__body">
+      <div>
+        <div class="label">No body required</div>
+      </div>
+      <button class="btn-run" onclick="runRequest('health')">Run</button>
+      <div class="response" id="resp-health">
+        <div class="response__meta">
+          <span class="status-badge" id="badge-health"></span>
+          <span class="response__time" id="time-health"></span>
+        </div>
+        <pre id="pre-health"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- /transform -->
+  <div class="card" id="card-transform">
+    <div class="card__header" onclick="toggleCard('transform')">
+      <span class="method method--post">POST</span>
+      <span class="card__path">/transform</span>
+      <span class="card__desc">Normalize a JSON payload</span>
+      <span class="card__chevron">▶</span>
+    </div>
+    <div class="card__body">
+      <div>
+        <div class="label">Request body</div>
+        <textarea id="body-transform" rows="6">{
+  "firstName": "Ada",
+  "lastName":  "Lovelace",
+  "createdAt": "2024-01-15T09:00:00Z",
+  "accountId": null,
+  "jobTitle":  "  Engineer  "
+}</textarea>
+      </div>
+      <button class="btn-run" onclick="runRequest('transform')">Run</button>
+      <div class="response" id="resp-transform">
+        <div class="response__meta">
+          <span class="status-badge" id="badge-transform"></span>
+          <span class="response__time" id="time-transform"></span>
+        </div>
+        <pre id="pre-transform"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- /webhook/simulate -->
+  <div class="card" id="card-webhook">
+    <div class="card__header" onclick="toggleCard('webhook')">
+      <span class="method method--get">GET</span>
+      <span class="card__path">/webhook/simulate</span>
+      <span class="card__desc">Random CRM webhook event</span>
+      <span class="card__chevron">▶</span>
+    </div>
+    <div class="card__body">
+      <div>
+        <div class="label">No body required — returns a random event each call</div>
+      </div>
+      <button class="btn-run" onclick="runRequest('webhook')">Run</button>
+      <div class="response" id="resp-webhook">
+        <div class="response__meta">
+          <span class="status-badge" id="badge-webhook"></span>
+          <span class="response__time" id="time-webhook"></span>
+        </div>
+        <pre id="pre-webhook"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- /auth/token -->
+  <div class="card" id="card-auth">
+    <div class="card__header" onclick="toggleCard('auth')">
+      <span class="method method--post">POST</span>
+      <span class="card__path">/auth/token</span>
+      <span class="card__desc">OAuth2-style token exchange</span>
+      <span class="card__chevron">▶</span>
+    </div>
+    <div class="card__body">
+      <div>
+        <div class="label">Request body</div>
+        <textarea id="body-auth" rows="5">{
+  "grant_type": "client_credentials",
+  "client_id": "acme-integration-01",
+  "client_secret": "s3cr3t"
+}</textarea>
+      </div>
+      <button class="btn-run" onclick="runRequest('auth')">Run</button>
+      <div class="response" id="resp-auth">
+        <div class="response__meta">
+          <span class="status-badge" id="badge-auth"></span>
+          <span class="response__time" id="time-auth"></span>
+        </div>
+        <pre id="pre-auth"></pre>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>Express · Node.js · Deployed on Render &nbsp;·&nbsp; <a href="https://jeffmaddow-ops.github.io" target="_top">Back to portfolio</a></p>
+</footer>
+
+<script>
+  // Base URL: use current origin so it works locally AND on Render
+  const BASE = window.location.origin;
+
+  const ENDPOINTS = {
+    health:    { method: 'GET',  path: '/health' },
+    transform: { method: 'POST', path: '/transform' },
+    webhook:   { method: 'GET',  path: '/webhook/simulate' },
+    auth:      { method: 'POST', path: '/auth/token' },
+  };
+
+  function toggleCard(id) {
+    const card = document.getElementById('card-' + id);
+    card.classList.toggle('is-open');
+  }
+
+  async function runRequest(id) {
+    const ep = ENDPOINTS[id];
+    const btn = document.querySelector(`#card-${id} .btn-run`);
+    const respEl   = document.getElementById('resp-' + id);
+    const preEl    = document.getElementById('pre-' + id);
+    const badgeEl  = document.getElementById('badge-' + id);
+    const timeEl   = document.getElementById('time-' + id);
+
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+
+    const opts = { method: ep.method, headers: { 'Content-Type': 'application/json' } };
+
+    if (ep.method === 'POST') {
+      const bodyEl = document.getElementById('body-' + id);
+      try {
+        opts.body = JSON.stringify(JSON.parse(bodyEl.value));
+      } catch {
+        preEl.innerHTML = '<span style="color:var(--red)">Invalid JSON in request body.</span>';
+        respEl.classList.add('is-visible');
+        btn.disabled = false;
+        btn.textContent = 'Run';
+        return;
+      }
+    }
+
+    const t0 = Date.now();
+    try {
+      const res = await fetch(BASE + ep.path, opts);
+      const ms  = Date.now() - t0;
+      const data = await res.json();
+
+      badgeEl.textContent = res.status + ' ' + res.statusText;
+      badgeEl.className = 'status-badge ' + (res.ok ? 'status-badge--ok' : 'status-badge--err');
+      timeEl.textContent = ms + ' ms';
+      preEl.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+    } catch (err) {
+      badgeEl.textContent = 'Network Error';
+      badgeEl.className = 'status-badge status-badge--err';
+      timeEl.textContent = '';
+      preEl.textContent = err.message;
+    }
+
+    respEl.classList.add('is-visible');
+    btn.disabled = false;
+    btn.textContent = 'Run';
+  }
+
+  function syntaxHighlight(json) {
+    return json.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) return `<span class="json-key">${match}</span>`;
+          return `<span class="json-string">${match}</span>`;
+        }
+        if (/true|false/.test(match)) return `<span class="json-bool">${match}</span>`;
+        if (/null/.test(match))       return `<span class="json-null">${match}</span>`;
+        return `<span class="json-number">${match}</span>`;
+      }
+    );
+  }
+</script>
+</body>
+</html>
