@@ -1,28 +1,44 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const Redis = require('ioredis');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const START_TIME = Date.now();
+
+/* Redis connection */
+const redis = new Redis(process.env.REDIS_URL);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── GET /health ──────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  const uptimeMs = Date.now() - START_TIME;
-  const uptimeSec = Math.floor(uptimeMs / 1000);
+app.get('/health', async (req, res) => {
+  try {
+    await redis.set("healthcheck", "ok", "EX", 10);
+    const value = await redis.get("healthcheck");
 
-  res.json({
-    status: 'ok',
-    service: 'jm-api-demo',
-    version: '1.0.0',
-    uptime_seconds: uptimeSec,
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production'
-  });
+    if (value !== "ok") throw new Error("Redis failed");
+
+    const uptimeMs = Date.now() - START_TIME;
+    const uptimeSec = Math.floor(uptimeMs / 1000);
+
+    res.json({
+      status: "ok",
+      service: "jm-api-demo",
+      redis: "connected",
+      uptime_seconds: uptimeSec,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      redis: "disconnected"
+    });
+  }
 });
 
 // ── POST /transform ──────────────────────────────────────────────────────────
