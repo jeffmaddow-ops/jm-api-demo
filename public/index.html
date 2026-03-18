@@ -113,9 +113,10 @@
       cursor: pointer;
       user-select: none;
     }
-    .card__header:hover { background: rgba(255,255,255,0.03); }
+    .card__header:hover { background: var(--accent-glow); }
 
     .method {
+      font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
       padding: 2px 7px;
@@ -123,11 +124,11 @@
       letter-spacing: 0.5px;
     }
     .method--get    { background: rgba(63,185,80,0.15);  color: var(--green); }
-    .method--post   { background: rgba(88,166,255,0.15); color: var(--blue);  }
+    .method--post   { background: var(--accent-dim);     color: var(--accent); }
 
-    .card__path { color: var(--text); font-size: 13px; }
-    .card__desc { color: var(--muted); font-size: 12px; margin-left: auto; }
-    .card__chevron { color: var(--muted); font-size: 10px; transition: transform 0.2s; margin-left: 8px; }
+    .card__path  { font-family: var(--font-mono); color: var(--text); font-size: 13px; }
+    .card__desc  { font-family: var(--font-body); color: var(--muted); font-size: 12px; margin-left: auto; }
+    .card__chevron { color: var(--muted-dim); font-size: 10px; transition: transform 0.2s; margin-left: 8px; }
     .card.is-open .card__chevron { transform: rotate(90deg); }
 
     .card__body {
